@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SmartQueue - Management</title>
+    <link href="./css/output.css" rel="stylesheet">
+    <link href="./css/input.css" rel="stylesheet">
+    
+  </head>
+  <body class="text-gray-200 font-[kanit]" style="background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://shabuku.co.th/wp-content/uploads/2023/08/Shabuku.jpg'); 
+             background-size: cover; 
+             background-attachment: fixed;">
+    <nav class="bg-white shadow p-4 flex justify-between items-center">
+      <h1 class="text-xl font-bold text-blue-600">ระบบจองคิว - Management</h1>
+      <div class="space-x-4">
+        <a href="index.html" class="text-gray-600">หน้าแรก</a>
+        <a href="index.html" class="bg-red-600 text-white px-4 py-2 rounded-lg">ออกจากระบบ</a>
+      </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto p-6">
+      <!-- Tab Navigation -->
+   
+
+      <!-- Queue Management Tab -->
+      <div id="queue-tab" class="tab-content">
+        <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+          <h2 class="text-2xl font-bold text-gray-800 mb-4 ">จัดการคิว</h2>
+          
+          <!-- Current Queue List -->
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-gray-800 text-lg">📋 คิวปัจจุบัน</h3>
+            <a class="text-red-600 cursor-pointer hover:text-red-800" onclick="clearQueues()">ล้างคิวทั้งหมด</a>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse">
+              <thead>
+                <tr class="bg-blue-200 text center">
+                  <th class="border p-3  text-gray-800">หมายเลขคิว</th>
+                  <th class="border p-3  text-gray-800">ชื่อลูกค้า</th>
+                  <th class="border p-3  text-gray-800">จำนวนคน</th>
+                  <th class="border p-3  text-gray-800">เบอร์โทร</th>
+                  <th class="border p-3  text-gray-800">สถานะ</th>
+                  <th class="border p-3  text-gray-800">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="queue-list">
+                <!-- ข้อมูล -->
+              </tbody>
+            </table>
+          </div>
+          <p id="no-queue-msg" class="text-gray-600 text-center mt-4">ยังไม่มีคิวในระบบ</p>
+        </div>
+      </div>
+
+      
+          
+            </table>
+          </div>
+        </div>
+      </div>
+
+      
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="./js/management.js"></script>
+    <script src="./js/reserve.js"></script>
+  </body>
+</html>

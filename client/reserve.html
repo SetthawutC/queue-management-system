@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="./css/output.css" rel="stylesheet">
+    <link href="./css/input.css" rel="stylesheet">
+</head>
+<body class="font-[kanit]" style="background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('https://shabuku.co.th/wp-content/uploads/2023/08/Shabuku.jpg'); 
+background-size: cover; 
+background-attachment: fixed;">
+    <header>
+        <nav class="bg-white/95 backdrop-blur shadow-md p-4 flex justify-between items-center sticky top-0 z-50">
+      <h1 class="text-[36px] font-bold text-blue-600">ระบบจองคิว</h1>
+      <div class="space-x-4">
+        <a href="index.html" class="text-gray-600 hover:text-blue-600 font-medium transition-colors pr-4">กลับไปหน้าแรก</a>
+       
+       
+      </div>
+    </nav>
+    </header>
+    <main class="min-h-[calc(100vh-88px)] flex items-center justify-center p-4">
+        <div class="bg-white/95 backdrop-blur-md p-8 md:p-10 rounded-3xl shadow-2xl w-full max-w-lg border border-white/50 transform transition-all">
+        
+        <div class="text-center mb-8">
+            <div class="inline-block p-3 rounded-full bg-blue-100 text-blue-600 mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+            </div>
+            <h2 class="text-3xl font-bold text-gray-800">จองคิวรับประทานอาหาร</h2>
+            <p class="text-gray-500 mt-2">กรอกข้อมูลด้านล่างเพื่อรับหมายเลขคิว</p>
+        </div>
+
+        <form class="space-y-5">
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1 ml-1">ชื่อลูกค้า</label>
+                <input type="text" name="customer_name" required
+                    class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-800 placeholder-gray-400"
+                    placeholder="เช่น คุณสมชาย">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1 ml-1">จำนวนลูกค้า (ท่าน)</label>
+                    <input type="number" name="customer_count" min="1" max="20" required
+                        class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-800 placeholder-gray-400"
+                        placeholder="0">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1 ml-1">เบอร์โทรศัพท์</label>
+                    <input type="tel" name="phone" required
+                        class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-800 placeholder-gray-400"
+                        placeholder="08X-XXX-XXXX">
+                </div>
+            </div>
+
+            
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1 ml-1">หมายเหตุ (ถ้ามี)</label>
+                <textarea name="note" rows="2"
+                    class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-800 placeholder-gray-400"
+                    placeholder="เช่น แพ้อาหาร, ขอเก้าอี้เด็ก..."></textarea>
+            </div>
+
+            <button type="button" onclick="submitData()"
+                class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-blue-500/40 transform hover:-translate-y-0.5 transition-all active:scale-95 text-lg">
+                จองคิว
+                
+            </button>
+            
+
+            <p class="text-xs text-center text-gray-500 mt-4">
+                * กรุณามาถึงร้านก่อนเวลาคิวประมาณ 10 นาที
+            </p>
+        </form>
+        
+    </div>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="./js/reserve.js"></script>
+</body>
+</html>
