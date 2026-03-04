@@ -33,5 +33,5 @@ const sendUpdateToAll = async () => {
         console.error('Error broadcasting queue update', err);
     }
 };
-
+console.log(clients.length, 'SSE clients count');
 module.exports = { router, sendUpdateToAll };

@@ -31,7 +31,7 @@ async function loadQueues() {
     }
 }
 
-// --- 3. แสดงคิวในตาราง (รองรับ Label A01, B01) ---
+// --- 3. แสดงคิวในตาราง
 function displayQueues() {
     const queueList = document.getElementById("queue-list");
     const noQueueMsg = document.getElementById("no-queue-msg");
@@ -44,7 +44,7 @@ function displayQueues() {
     
     if (noQueueMsg) noQueueMsg.style.display = "none";
     
-    // เรียงตาม queue_number (Global) เพื่อให้คนจองก่อนอยู่บนสุด
+
     const sortedQueues = [...queues].sort((a, b) => a.queue_number - b.queue_number);
 
     queueList.innerHTML = sortedQueues
@@ -55,17 +55,22 @@ function displayQueues() {
                 <td class="p-3 text-gray-800 text-center">${queue.customer_count || "-"}</td>
                 <td class="p-3 text-gray-800">${queue.phone || "-"}</td>
                 <td class="p-3">
-                    <span class="px-3 py-1 rounded-full text-xs font-bold text-white ${getStatusColor(queue.customerstatus)}">
+                    <span class="inline-flex items-center px-4 py-1 rounded-full text-sm font-semibold text-white shadow-sm ${getStatusColor(queue.customerstatus)}">
+                        <!-- small circle indicator -->
+                        <span class="w-2 h-2 rounded-full mr-2 ${getStatusColor(queue.customerstatus)}"></span>
                         ${getStatusLabel(queue.customerstatus)}
                     </span>
                 </td>
                 <td class="p-3 text-center space-x-2">
                     ${queue.customerstatus === 'waiting' ? `
-                        <button onclick="completeQueue('${queue._id}')" class="bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded shadow-sm transition">
+                        <button onclick="completeQueue('${queue._id}')" class="inline-flex items-center justify-center bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow transition duration-150 w-28">
                             เรียกลูกค้า
                         </button>
                     ` : ''}
-                    <button onclick="cancelQueue('${queue._id}')" class="bg-red-100 text-red-600 hover:bg-red-600 hover:text-white px-3 py-1 rounded transition text-sm">
+                    <button onclick="cancelQueue('${queue._id}')" class="inline-flex items-center justify-center bg-red-500 hover:bg-red-600 text-white px-4 py-2  rounded-lg shadow transition duration-150 w-28">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                         ลบ
                     </button>
                 </td>
@@ -110,6 +115,16 @@ async function cancelQueue(id) {
         });
     } catch (error) {
         console.error("Cancel error:", error);
+    }
+}
+
+async function clearQueues() {
+    if (!confirm("ต้องการล้างคิวทั้งหมดใช่หรือไม่?")) return;
+    try {
+        await axios.delete(`http://localhost:8000/queues`);
+        loadQueues(); // โหลดข้อมูลใหม่หลังจากล้างคิว
+    } catch (error) {
+        console.error("Clear queues error:", error);
     }
 }
 

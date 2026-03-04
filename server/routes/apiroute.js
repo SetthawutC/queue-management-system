@@ -4,13 +4,10 @@ const QueueNow = require('../models/queuenow');
 const QueueHistory = require('../models/queuehistory');
 const { sendUpdateToAll } = require('./sse');
 
-//post queue data
-
 router.post('/queue', async (req, res) => {
     try {
         const { customer_name, phone, customer_count, note } = req.body;
-
-        // 1. แยกหมวดหมู่ (A, B, C)
+        //แยกหมวดหมู่ (A, B, C)
         function getCategory(count) {
             const n = Number(count) || 0;
             return n <= 2 ? 'A' : (n <= 6 ? 'B' : 'C');
@@ -43,7 +40,7 @@ router.post('/queue', async (req, res) => {
         const savedQueue = await newQueue.save();
 
         // 6. บันทึกลง QueueHistory โดยใช้ข้อมูลจาก savedQueue
-        const historyData = new QueueHistory({
+        /*const historyData = new QueueHistory({
             ...savedQueue.toObject(),
             _id: undefined,
             original_id: savedQueue._id,
@@ -51,7 +48,7 @@ router.post('/queue', async (req, res) => {
             created_at_time: new Date().toLocaleTimeString('th-TH'),
             timestamp: new Date()
         });
-        await historyData.save();
+        await historyData.save();*/
 
         res.status(201).json(savedQueue);
         console.log(`[Success] คิวใหม่: ${label} (ลำดับรวม: ${nextQueueNumber})`);
@@ -103,38 +100,80 @@ router.get('/queue/:id', async (req, res) => {
 // Update queue by id (e.g., cancel or complete)
 router.put('/queue/:id', async (req, res) => {
     try {
-        const updated = await QueueNow.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
-        if (!updated) return res.status(404).json({ error: 'Queue not found' });
-        // If status changed to cancelled or completed, also add to history and remove from current list
-        if (req.body.status === 'cancelled' || req.body.customerstatus === 'cancelled' || req.body.status === 'completed' || req.body.customerstatus === 'completed') {
-            // create history record
-            const historyData = {
-                customerstatus: req.body.status || req.body.customerstatus || updated.customerstatus,
-                customer_name: updated.customer_name,
-                phone: updated.phone,
-                note: updated.note,
-                customer_count: updated.customer_count,
-                queue_number: updated.queue_number,
-                category: updated.category,
-                category_seq: updated.category_seq,
-                label: updated.label
-            };
-            await QueueHistory.create(historyData);
-            // remove from QueueNow
-            await QueueNow.findByIdAndDelete(req.params.id);
-
-            // broadcast update so clients drop this entry  
-            sendUpdateToAll();
-
-            return res.json({ message: 'Queue moved to history', data: historyData });
+        // 1. หาข้อมูลคิวก่อนหน้าเพื่อเช็คสถานะปัจจุบัน
+        const currentQueue = await QueueNow.findById(req.params.id);
+        
+        if (!currentQueue) {
+            return res.status(404).json({ error: 'Queue not found' });
         }
 
-        res.json(updated);
+        const newStatus = req.body.status || req.body.customerstatus;
+
+        // 2. LOGIC: ถ้าสถานะปัจจุบัน "ไม่ใช้ waiting" (แปลว่าเคยถูกกดมาแล้ว 1 รอบ) 
+        // และ Admin ส่งสถานะจบงาน (cancelled/completed) มาซ้ำอีกครั้ง
+        if (currentQueue.customerstatus !== 'waiting' && 
+           (newStatus === 'cancelled' || newStatus === 'completed')) {
+            
+            // ลบคิวออกจาก QueueNow ทันที
+            await QueueNow.findByIdAndDelete(req.params.id);
+            
+            // แจ้งเตือนทุกคนผ่าน SSE
+            sendUpdateToAll();
+            
+            return res.json({ 
+                message: 'Queue removed from current list (already in history)', 
+                id: req.params.id 
+            });
+        }
+
+        // 3. LOGIC: ถ้าเป็นการกดครั้งแรก (สถานะยังเป็น waiting)
+        // ให้ทำการอัปเดตสถานะ และ บันทึกลง History
+        const updated = await QueueNow.findByIdAndUpdate(
+            req.params.id, 
+            { $set: { customerstatus: newStatus } }, // อัปเดตสถานะใหม่
+            { returnDocument: 'after' }
+        );
+
+        // สร้างประวัติ (History) ในการกดครั้งแรก
+        const historyData = {
+            customerstatus: newStatus,
+            customer_name: updated.customer_name,
+            phone: updated.phone,
+            note: updated.note,
+            customer_count: updated.customer_count,
+            queue_number: updated.queue_number,
+            category: updated.category,
+            category_seq: updated.category_seq,
+            label: updated.label,
+            original_id: updated._id,
+            timestamp: new Date()
+        };
+        await QueueHistory.create(historyData);
+
+        // แจ้งเตือนทุกคนผ่าน SSE
+        sendUpdateToAll();
+
+        res.json({ message: 'Status updated and recorded to history', data: updated });
+
     } catch (error) {
         console.error('Error updating queue:', error.message);
         res.status(500).json({ error: 'Error updating queue' });
     }
 });
+
+// ลบคิวทั้งหมด (สำหรับการล้างข้อมูล)
+router.delete('/queues', async (req, res) => {
+    try {
+        await QueueNow.deleteMany({});
+        await QueueHistory.deleteMany({});
+        res.json({ message: 'All queues deleted successfully' });
+        sendUpdateToAll();
+    } catch (error) {
+        console.error('Error deleting queues:', error.message);
+        res.status(500).json({ error: 'Error deleting queues' });
+    }
+});
+
 
 
 
