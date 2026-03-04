@@ -10,69 +10,59 @@ router.post('/queue', async (req, res) => {
     try {
         const { customer_name, phone, customer_count, note } = req.body;
 
-        // 1. ฟังก์ชันแยกหมวดหมู่
+        // 1. แยกหมวดหมู่ (A, B, C)
         function getCategory(count) {
             const n = Number(count) || 0;
-            if (n <= 2) return 'A';
-            if (n <= 6) return 'B';
-            return 'C';
+            return n <= 2 ? 'A' : (n <= 6 ? 'B' : 'C');
         }
         const category = getCategory(customer_count);
 
-        // 2. หาค่าลำดับล่าสุดของหมวดหมู่นี้ (category_seq) 
-        // ปรับปรุง: ใช้ .findOne() และ sort จะเร็วกว่าการดึงมาทั้งหมด (.find)
+        // 2. หาคิวล่าสุดของหมวดนี้เพื่อรันเลขต่อ (เน้นที่ category_seq ตรงๆ)
         const lastInCategory = await QueueNow.findOne({ category: category })
                                              .sort({ category_seq: -1 });
         
-        // ถ้าไม่มีคิวในหมวดนี้เลย ให้เริ่มที่ 1 (ซึ่งจะกลายเป็น A01, B01, C01)
-        const nextCatSeq = lastInCategory ? lastInCategory.category_seq + 1 : 1;
+        // ถ้าไม่มีคิวในหมวดนี้เลย ให้เริ่มที่ 1
+        const nextCatSeq = lastInCategory ? Number(lastInCategory.category_seq) + 1 : 1;
 
-        // 3. หาคิว Global (เลขรันรวม) เพื่อใช้เรียงลำดับภาพรวม
+        // 3. หา Global Queue Number (เลขรันรวมทั้งร้าน)
         const lastGlobal = await QueueNow.findOne().sort({ queue_number: -1 });
-        const nextQueueNumber = lastGlobal ? lastGlobal.queue_number + 1 : 1;
+        const nextQueueNumber = lastGlobal ? Number(lastGlobal.queue_number) + 1 : 1;
 
-        // 4. สร้างป้าย Label (เช่น A01, B05)
+        // 4. สร้างป้าย Label (เช่น C01)
         const label = `${category}${String(nextCatSeq).padStart(2, '0')}`;
 
-        // 5. บันทึกข้อมูลลง Database
+        // 5. บันทึกลง QueueNow
         const newQueue = new QueueNow({
-            customer_name,
-            phone,
-            customer_count,
-            note,
-            queue_number: nextQueueNumber, // เลขรันรวม (1, 2, 3...)
-            category,                      // หมวด (A, B, C)
-            category_seq: nextCatSeq,      // ลำดับในหมวด (1, 2, 3...)
-            label,                         // ป้าย (A01, B01...)
-            customerstatus: 'waiting'      // กำหนดค่าเริ่มต้นเป็น waiting
+            customer_name, phone, customer_count, note,
+            queue_number: nextQueueNumber,
+            category, 
+            category_seq: nextCatSeq, 
+            label,
+            customerstatus: 'waiting'
         });
-
         const savedQueue = await newQueue.save();
-        
-        // 6. ส่งข้อมูลกลับไปให้ Frontend
+
+        // 6. บันทึกลง QueueHistory โดยใช้ข้อมูลจาก savedQueue
+        const historyData = new QueueHistory({
+            ...savedQueue.toObject(),
+            _id: undefined,
+            original_id: savedQueue._id,
+            created_at_date: new Date().toLocaleDateString('th-TH'),
+            created_at_time: new Date().toLocaleTimeString('th-TH'),
+            timestamp: new Date()
+        });
+        await historyData.save();
+
         res.status(201).json(savedQueue);
-        console.log(`[Success] จองคิวสำเร็จ: ${savedQueue.label} (Global: ${savedQueue.queue_number})`);
+        console.log(`[Success] คิวใหม่: ${label} (ลำดับรวม: ${nextQueueNumber})`);
+        // broadcast new queue to any SSE subscribers (e.g., management page)
+        sendUpdateToAll();
 
     } catch (error) {
-        console.error('Error creating queue:', error.message);
-        res.status(400).json({ error: 'Error creating queue' });
+        console.error('Error:', error.message);
+        res.status(400).json({ error: 'เกิดข้อผิดพลาดในการจองคิว' });
     }
 });
-
-//Keep queue history 
-router.post('/queuehistory', async (req, res) => {
-    try {
-        const newQueueHistory = new QueueHistory(req.body);
-        const savedQueueHistory = await newQueueHistory.save();
-
-        res.status(201).json(savedQueueHistory);
-        console.log("results:", savedQueueHistory);
-    } catch (error) {
-        console.error('Error creating queue history',error.message);
-        res.status(400).json({ error: 'Error creating queue history' });
-    }
-});
-
 
 //Get queue data
 router.get('/queue', async (req, res) => {
@@ -133,7 +123,7 @@ router.put('/queue/:id', async (req, res) => {
             // remove from QueueNow
             await QueueNow.findByIdAndDelete(req.params.id);
 
-            // broadcast update so clients drop this entry
+            // broadcast update so clients drop this entry  
             sendUpdateToAll();
 
             return res.json({ message: 'Queue moved to history', data: historyData });
