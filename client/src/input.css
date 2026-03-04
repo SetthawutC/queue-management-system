@@ -1,8 +1,8 @@
-@import "@tailwindcss";
+@import "tailwindcss"; 
+
 @font-face {
   font-family: 'Kanit';
   src: url('/client/asset/font/Kanit-Regular.ttf') format('woff2');
   font-weight: 400;
   font-display: swap;
 }
-
