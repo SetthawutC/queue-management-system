@@ -5,16 +5,15 @@ const QueueHistory = require('../models/queuehistory');
 const { sendUpdateToAll } = require('./sse');
 const NodeCache = require('node-cache');
 
-// สร้าง Cache Instance
+// สร้าง Cache Instance (TTL 15 วินาที สำหรับข้อมูลคิวที่เปลี่ยนบ่อย)
 const myCache = new NodeCache({ stdTTL: 15, checkperiod: 20 });
 
 // คีย์สำหรับเก็บ Cache
 const CACHE_KEY_QUEUENOW = "queuenow_all";
 const CACHE_KEY_HISTORY = "queuehistory_all";
 
-// ฟังก์ชันล้าง Cache เมื่อข้อมูลเปลี่ยน + Log
+// ฟังก์ชันล้าง Cache เมื่อข้อมูลเปลี่ยน
 const clearQueueCache = () => {
-    console.log('🧹 Data changed: Clearing relevant caches...');
     myCache.del([CACHE_KEY_QUEUENOW, CACHE_KEY_HISTORY]);
 };
 
@@ -52,7 +51,7 @@ router.post('/queue', async (req, res) => {
         clearQueueCache();
 
         res.status(201).json(savedQueue);
-        console.log(`[Success] ✅ คิวใหม่: ${label} | Cache cleared`);
+        console.log(`[Success] คิวใหม่: ${label} (ลำดับรวม: ${nextQueueNumber})`);
         sendUpdateToAll();
 
     } catch (error) {
@@ -61,18 +60,14 @@ router.post('/queue', async (req, res) => {
     }
 });
 
-// Get queue data (With Cache Log)
+// Get queue data (With Cache)
 router.get('/queue', async (req, res) => {
     try {
         const cachedData = myCache.get(CACHE_KEY_QUEUENOW);
-        if (cachedData) {
-            console.log('🚀 Cache Hit: Successfully retrieved [QueueNow] from memory');
-            return res.json(cachedData);
-        }
+        if (cachedData) return res.json(cachedData);
 
-        console.log('☁️ Cache Miss: Fetching [QueueNow] from MongoDB...');
         const queues = await QueueNow.find();
-        myCache.set(CACHE_KEY_QUEUENOW, queues);
+        myCache.set(CACHE_KEY_QUEUENOW, queues); // บันทึกลง Cache
         res.json(queues);
     } catch (error) {
         console.error('Error fetching queues:', error.message);
@@ -80,16 +75,12 @@ router.get('/queue', async (req, res) => {
     }
 });
 
-// Get queue history (With Cache Log)
+// Get queue history (With Cache)
 router.get('/queuehistory', async (req, res) => {
     try {
         const cachedHistory = myCache.get(CACHE_KEY_HISTORY);
-        if (cachedHistory) {
-            console.log('🚀 Cache Hit: Successfully retrieved [QueueHistory] from memory');
-            return res.json(cachedHistory);
-        }
+        if (cachedHistory) return res.json(cachedHistory);
 
-        console.log('☁️ Cache Miss: Fetching [QueueHistory] from MongoDB...');
         const queues = await QueueHistory.find();
         myCache.set(CACHE_KEY_HISTORY, queues);
         res.json(queues);
@@ -99,20 +90,17 @@ router.get('/queuehistory', async (req, res) => {
     }
 });
 
-// Get queue data from id
+// Get queue data from id (Cache แยกตาม ID)
 router.get('/queue/:id', async (req, res) => {
     try {
         const cacheKey = `queue_${req.params.id}`;
         const cachedQueue = myCache.get(cacheKey);
-        if (cachedQueue) {
-            console.log(`🚀 Cache Hit: Retrieved Queue ID ${req.params.id} from cache`);
-            return res.json(cachedQueue);
-        }
+        if (cachedQueue) return res.json(cachedQueue);
 
         const queue = await QueueNow.findById(req.params.id);
         if (!queue) return res.status(404).json({ error: 'Queue not found' });
 
-        myCache.set(cacheKey, queue, 30);
+        myCache.set(cacheKey, queue, 30); // Cache เฉพาะตัว 30 วินาที
         res.json(queue);
     } catch (error){
         res.status(500).json({ error: 'Error fetching queue' });
@@ -135,7 +123,6 @@ router.put('/queue/:id', async (req, res) => {
            (newStatus === 'cancelled' || newStatus === 'completed')) {
             
             await QueueNow.findByIdAndDelete(req.params.id);
-            console.log(`🗑️ Queue ${req.params.id} removed and cache invalidated`);
             sendUpdateToAll();
             return res.json({ message: 'Queue removed from current list' });
         }
@@ -153,7 +140,6 @@ router.put('/queue/:id', async (req, res) => {
             timestamp: new Date()
         });
 
-        console.log(`📝 Status updated for ${updated.label} and cache invalidated`);
         sendUpdateToAll();
         res.json({ message: 'Status updated and recorded to history', data: updated });
 
@@ -164,12 +150,13 @@ router.put('/queue/:id', async (req, res) => {
 });
 
 // ลบคิวทั้งหมด
-router.delete('/queue', async (req, res) => {
+router.delete('/queues', async (req, res) => {
     try {
         await QueueNow.deleteMany({});
+        await QueueHistory.deleteMany({});
         
+        // ล้าง Cache ทั้งหมดในระบบ
         myCache.flushAll();
-        console.log('💥 System Flush: All data deleted and cache cleared');
         
         res.json({ message: 'All queues deleted successfully' });
         sendUpdateToAll();

@@ -19,6 +19,7 @@
     "express": "^5.2.1",
     "mongoose": "^9.2.3",
     "mysql2": "^3.16.1",
+    "node-cache": "^5.1.2",
     "tailwind": "^4.0.0",
     "tailwindcss": "^4.2.1"
   },

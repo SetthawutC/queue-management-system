@@ -116,7 +116,7 @@ function renderQueueUI(queues) {
         if (waitingBeforeMe === 0) {
             // --- CASE: ใกล้ถึงคิวแล้ว (แทนที่เลข 00) ---
             remainingElem.textContent = "ใกล้ถึงคิวของคุณแล้ว";
-            remainingElem.className = "text-[44px] md:text-[60px] font-black text-center leading-tight text-orange-500 animate-pulse px-4";
+            remainingElem.className = "text-[60px] font-black text-center leading-tight text-orange-500 animate-pulse px-4";
             
             if (remainingText) {
                 remainingText.classList.remove("hidden");
