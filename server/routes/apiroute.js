@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const QueueNow = require('../models/queuenow');
 const QueueHistory = require('../models/queuehistory');
-const { sendUpdateToAll } = require('./sse');
+const { sendUpdateToAll } = require('./ServerSentEvent');
 const NodeCache = require('node-cache');
 
 // สร้าง Cache Instance

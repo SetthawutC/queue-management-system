@@ -60,5 +60,4 @@ const sendUpdateToAll = async () => {
         console.error('Error broadcasting queue update', err);
     }
 };
-
 module.exports = { router, sendUpdateToAll };

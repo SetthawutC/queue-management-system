@@ -164,7 +164,7 @@ function renderQueueUI(queues) {
 
 // --- 3. ส่วนของ SSE (รับข้อมูลจาก Admin แบบ Real-time) ---
 function initQueueSSE() {
-    const eventSource = new EventSource("http://localhost:8000/queue-updates");
+    const eventSource = new EventSource("http://192.168.0.100:8000/queue-updates");
     eventSource.onmessage = (event) => {
         try {
             const queues = JSON.parse(event.data);
@@ -180,7 +180,7 @@ function initQueueSSE() {
 // --- 4. Initial Load (ดึงข้อมูลครั้งแรกที่เข้าเว็บ) ---
 async function initialFetch() {
     try {
-        const response = await axios.get("http://localhost:8000/queue");
+        const response = await axios.get("http://192.168.0.100:8000/queue");
         renderQueueUI(response.data);
     } catch (error) { console.error("Initial fetch failed:", error); }
 }
@@ -197,7 +197,7 @@ async function cancelMyQueue() {
     
     if (confirm('คุณต้องการยกเลิกการจองคิวนี้ใช่หรือไม่?')) {
         try {
-            await axios.put(`http://localhost:8000/queue/${id}`, { 
+            await axios.put(`http://192.168.0.100:8000/queue/${id}`, { 
                 customerstatus: "cancelled" 
             });
             localStorage.clear();
@@ -207,3 +207,10 @@ async function cancelMyQueue() {
         }
     }
 }
+
+const btn = document.getElementById('menu-btn');
+const menu = document.getElementById('mobile-menu');
+
+  btn.addEventListener('click', () => {
+    menu.classList.toggle('hidden');
+  });

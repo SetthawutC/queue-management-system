@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const QueueNow = require('../models/queuenow');
 const QueueHistory = require('../models/queuehistory');
-const { sendUpdateToAll } = require('./sse');
+const { sendUpdateToAll } = require('./ServerSentEvent');
 const NodeCache = require('node-cache');
 
 // สร้าง Cache Instance (TTL 15 วินาที สำหรับข้อมูลคิวที่เปลี่ยนบ่อย)
@@ -18,6 +18,10 @@ const clearQueueCache = () => {
 };
 
 // --- ROUTES ---
+
+router.get('/', (req, res) => {
+    res.json({ message: 'Welcome to the Queue Management API' });
+});
 
 router.post('/queue', async (req, res) => {
     try {

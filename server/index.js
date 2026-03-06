@@ -6,7 +6,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const app = express();
 const apiroute = require('./routes/apiroute');
-const { router: sseRouter } = require('./routes/sse');
+const { router: sseRouter } = require('./routes/ServerSentEvent');
 const dbConnect = require('./config/db');
 
 app.use(express.json());
@@ -21,9 +21,9 @@ dbConnect();
 
 
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port http://localhost:${PORT}`);
-})
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Network access at http://192.168.0.100:${PORT}`);
+});
 
 
 
