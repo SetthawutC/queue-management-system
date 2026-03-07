@@ -1,4 +1,5 @@
 let queues = [];
+let currentSearchTerm = ""; // ตัวแปรเก็บคำค้นหา
 
 // --- 1. ส่วนของ SSE (แทนที่ Polling เดิม) ---
 function initManagementSSE() {
@@ -44,7 +45,16 @@ function displayQueues() {
 
   if (noQueueMsg) noQueueMsg.style.display = "none";
 
-  const sortedQueues = [...queues].sort(
+  // กรองข้อมูลตามคำค้นหา (Search Filter)
+  const filteredQueues = queues.filter((queue) => {
+    const term = currentSearchTerm.toLowerCase();
+    const name = (queue.customer_name || "").toLowerCase();
+    const label = (queue.label || queue.queue_number || "").toString().toLowerCase();
+    const phone = (queue.phone || "").toString().toLowerCase();
+    return name.includes(term) || label.includes(term) || phone.includes(term);
+  });
+
+  const sortedQueues = [...filteredQueues].sort(
     (a, b) => a.queue_number - b.queue_number,
   );
 
@@ -92,10 +102,16 @@ async function completeQueue(id) {
   const myQueue = queues.find((q) => q._id === id);
   if (!myQueue) return;
 
-  // Logic บังคับลำดับ: เช็คว่ามีใครเลข Global น้อยกว่าเราแล้วยัง 'waiting' ไหม
+  // Helper: ระบุ Catalog จากตัวอักษรแรกของ Label (เช่น A001 -> A)
+  const getCatalog = (q) => (q.label ? q.label.charAt(0).toUpperCase() : "OTHER");
+  const myCatalog = getCatalog(myQueue);
+
+  // Logic บังคับลำดับ: เช็คว่ามีใครมาก่อนเราแล้วยัง 'waiting' **เฉพาะใน Catalog เดียวกัน** ไหม
   const waitingsBefore = queues.filter(
     (q) =>
-      q.customerstatus === "waiting" && q.queue_number < myQueue.queue_number,
+      q.customerstatus === "waiting" && 
+      q.queue_number < myQueue.queue_number &&
+      getCatalog(q) === myCatalog,
   );
 
   if (waitingsBefore.length > 0) {
@@ -132,7 +148,7 @@ async function cancelQueue(id) {
 async function clearQueues() {
   if (!confirm("ต้องการล้างคิวทั้งหมดใช่หรือไม่?")) return;
   try {
-    await axios.delete(`http://localhost:8000/queues`);
+    await axios.delete(`http://localhost:8000/queue`);
     loadQueues(); // โหลดข้อมูลใหม่หลังจากล้างคิว
   } catch (error) {
     console.error("Clear queues error:", error);
@@ -162,4 +178,13 @@ function getStatusLabel(status) {
 document.addEventListener("DOMContentLoaded", () => {
   loadQueues(); // โหลดครั้งแรก
   initManagementSSE(); // เปิดท่อรับข้อมูล Real-time
+
+  // Event Listener สำหรับช่องค้นหา
+  const searchInput = document.getElementById("search-input");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      currentSearchTerm = e.target.value.trim();
+      displayQueues(); // อัปเดตตารางทันทีที่พิมพ์
+    });
+  }
 });

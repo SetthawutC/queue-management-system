@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const QueueNow = require('../models/queuenow');
 const QueueHistory = require('../models/queuehistory');
+const Counter = require('../models/counter');
 const { sendUpdateToAll } = require('./ServerSentEvent');
 const NodeCache = require('node-cache');
 
@@ -18,24 +19,35 @@ const clearQueueCache = () => {
     myCache.del([CACHE_KEY_QUEUENOW, CACHE_KEY_HISTORY]);
 };
 
-// --- ROUTES ---
+// --- ROUTES ---//
 
+//บันทึกคิวใหม่
 router.post('/queue', async (req, res) => {
     try {
         const { customer_name, phone, customer_count, note } = req.body;
-        
         function getCategory(count) {
             const n = Number(count) || 0;
             return n <= 2 ? 'A' : (n <= 6 ? 'B' : 'C');
         }
         const category = getCategory(customer_count);
+        
+        //ดึงเลข Global Queue Number
+        const globalCounter = await Counter.findOneAndUpdate(
+            { _id: 'global_queue' },
+            { $inc: { seq: 1 } },
+            { new: true, upsert: true }
+        );
+        const nextQueueNumber = globalCounter.seq;
 
-        const lastInCategory = await QueueNow.findOne({ category: category }).sort({ category_seq: -1 });
-        const nextCatSeq = lastInCategory ? Number(lastInCategory.category_seq) + 1 : 1;
+        //ดึงเลขลำดับแยกตามหมวด (A, B, หรือ C)
+        const categoryCounter = await Counter.findOneAndUpdate(
+            { _id: `category_${category}` }, // แยก ID ตามหมวด เช่น category_A
+            { $inc: { seq: 1 } },
+            { new: true, upsert: true }
+        );
+        const nextCatSeq = categoryCounter.seq;
 
-        const lastGlobal = await QueueNow.findOne().sort({ queue_number: -1 });
-        const nextQueueNumber = lastGlobal ? Number(lastGlobal.queue_number) + 1 : 1;
-
+        // สร้าง Label
         const label = `${category}${String(nextCatSeq).padStart(2, '0')}`;
 
         const newQueue = new QueueNow({
@@ -46,14 +58,15 @@ router.post('/queue', async (req, res) => {
             label,
             customerstatus: 'waiting'
         });
+
         const savedQueue = await newQueue.save();
 
-        // ล้าง Cache เพราะมีคิวใหม่
-        clearQueueCache();
-
+        clearQueueCache(); // ล้าง Cache เดิมของคุณ
         res.status(201).json(savedQueue);
-        console.log(`[Success] ✅ คิวใหม่: ${label} | Cache cleared`);
-        sendUpdateToAll();
+        
+        console.log(`[Success] ✅ คิวใหม่: ${label} (Global: ${nextQueueNumber}) | Instance: ${process.env.NODE_APP_INSTANCE || 0}`);
+        
+        sendUpdateToAll(); // พ่นข้อมูลออก SSE ทันที
 
     } catch (error) {
         console.error('Error:', error.message);
@@ -61,16 +74,18 @@ router.post('/queue', async (req, res) => {
     }
 });
 
+
+
 // Get queue data (With Cache Log)
 router.get('/queue', async (req, res) => {
     try {
         const cachedData = myCache.get(CACHE_KEY_QUEUENOW);
         if (cachedData) {
-            console.log('🚀 Cache Hit: Successfully retrieved [QueueNow] from memory');
+            console.log('Cache Hit: Successfully retrieved [QueueNow] from memory');
             return res.json(cachedData);
         }
 
-        console.log('☁️ Cache Miss: Fetching [QueueNow] from MongoDB...');
+        console.log('Cache Miss: Fetching [QueueNow] from MongoDB...');
         const queues = await QueueNow.find();
         myCache.set(CACHE_KEY_QUEUENOW, queues);
         res.json(queues);
@@ -80,7 +95,7 @@ router.get('/queue', async (req, res) => {
     }
 });
 
-// Get queue history (With Cache Log)
+// Get queue history
 router.get('/queuehistory', async (req, res) => {
     try {
         const cachedHistory = myCache.get(CACHE_KEY_HISTORY);
@@ -105,7 +120,7 @@ router.get('/queue/:id', async (req, res) => {
         const cacheKey = `queue_${req.params.id}`;
         const cachedQueue = myCache.get(cacheKey);
         if (cachedQueue) {
-            console.log(`🚀 Cache Hit: Retrieved Queue ID ${req.params.id} from cache`);
+            console.log(` Cache Hit: Retrieved Queue ID ${req.params.id} from cache`);
             return res.json(cachedQueue);
         }
 
@@ -119,7 +134,7 @@ router.get('/queue/:id', async (req, res) => {
     }
 });
 
-// Update queue by id
+// Update queue by id and save to history
 router.put('/queue/:id', async (req, res) => {
     try {
         const currentQueue = await QueueNow.findById(req.params.id);
@@ -167,6 +182,7 @@ router.put('/queue/:id', async (req, res) => {
 router.delete('/queue', async (req, res) => {
     try {
         await QueueNow.deleteMany({});
+        await Counter.deleteMany({});
         
         myCache.flushAll();
         console.log('💥 System Flush: All data deleted and cache cleared');
@@ -178,5 +194,6 @@ router.delete('/queue', async (req, res) => {
         res.status(500).json({ error: 'Error deleting queues' });
     }
 });
+
 
 module.exports = router;

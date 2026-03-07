@@ -13,9 +13,8 @@ let clients = [];
 router.get('/queue-updates', (req, res) => {
     // 1. ตั้งค่า Header สำคัญเพื่อป้องกัน Connection หลุด
     res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache, no-transform'); // no-transform ป้องกันพวก proxy บีบอัดข้อมูล
+    res.setHeader('Cache-Control', 'no-cache, no-transform'); 
     res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no'); // สำคัญมากสำหรับผู้ที่ใช้ Nginx
 
     // ส่งข้อมูลครั้งแรกทันทีที่ต่อติด (Initial Connect)
     res.write(':ok\n\n');
@@ -28,33 +27,29 @@ router.get('/queue-updates', (req, res) => {
     const keepAlive = setInterval(() => {
         res.write(':keepalive\n\n');
     }, 20000);
-
+    //เมื่อ client ปิด connection ให้ล้าง Interval และลบ client ออกจาก list       
     req.on('close', () => {
-        clearInterval(keepAlive); // ล้าง Interval เมื่อ client ออกไป
+        clearInterval(keepAlive);
         clients = clients.filter(client => client.id !== clientId);
     });
 });
 
 const sendUpdateToAll = async () => {
     try {
-        let queues;
-        
-        // 3. ตรวจสอบจาก Cache ก่อนเพื่อให้สัมพันธ์กับ apiRoute
-        const cachedData = myCache.get(CACHE_KEY_QUEUENOW);
-        if (cachedData) {
-            queues = cachedData;
-        } else {
-            queues = await QueueNow.find();
-            // ถ้าดึงใหม่ ก็เก็บลง cache ไว้ด้วย
-            myCache.set(CACHE_KEY_QUEUENOW, queues);
-        }
+        //ดึงข้อมูลสดจาก MongoDB ทุกครั้งที่ต้องการ Broadcast
+        const queues = await QueueNow.find().sort({ queue_number: 1 });
+        //อัปเดตข้อมูลใหม่นี้กลับเข้าไปใน Cache ด้วย
+
+        myCache.set(CACHE_KEY_QUEUENOW, queues);
 
         const data = JSON.stringify(queues);
         
-        // ส่งข้อมูลให้ทุกคนที่ต่ออยู่
+        // 3. ส่งข้อมูลล่าสุดให้ทุกคนที่เชื่อมต่อ SSE อยู่
         clients.forEach(client => {
             client.res.write(`data: ${data}\n\n`);
         });
+
+        console.log(`[Broadcast] 📡 ข้อมูลคิวล่าสุดส่งออกไปแล้ว`);
 
     } catch (err) {
         console.error('Error broadcasting queue update', err);

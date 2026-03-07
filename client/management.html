@@ -33,16 +33,21 @@
             <h3 class="font-bold text-gray-800 text-lg">📋 คิวปัจจุบัน</h3>
             <a class="text-red-600 cursor-pointer hover:text-red-800" onclick="clearQueues()">ล้างคิวทั้งหมด</a>
           </div>
+
+          <div class="mb-4">
+            <input type="text" id="search-input" placeholder="🔍 ค้นหาชื่อลูกค้า, หมายเลขคิว หรือ เบอร์โทรศัพท์" class="text-gray-500 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50">
+          </div>
+
           <div class="overflow-x-auto">
             <table class="w-full border-collapse">
               <thead>
                 <tr class="bg-blue-200 text center">
-                  <th class="border p-3  text-gray-800">หมายเลขคิว</th>
-                  <th class="border p-3  text-gray-800">ชื่อลูกค้า</th>
-                  <th class="border p-3  text-gray-800">จำนวนคน</th>
-                  <th class="border p-3  text-gray-800">เบอร์โทร</th>
-                  <th class="border p-3  text-gray-800 ">สถานะ</th>
-                  <th class="border p-3  text-gray-800">จัดการ</th>
+                  <th class=" p-3  text-gray-800">หมายเลขคิว</th>
+                  <th class=" p-3  text-gray-800">ชื่อลูกค้า</th>
+                  <th class=" p-3  text-gray-800">จำนวนคน</th>
+                  <th class=" p-3  text-gray-800">เบอร์โทร</th>
+                  <th class=" p-3  text-gray-800 ">สถานะ</th>
+                  <th class=" p-3  text-gray-800">จัดการ</th>
                 </tr>
               </thead>
               <tbody id="queue-list">

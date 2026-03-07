@@ -21,8 +21,9 @@ dbConnect();
 
 
 
+
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Network access at http://192.168.0.100:${PORT}`);
+    console.log(`Network access at http://localhost:${PORT}`);
 });
 
 
