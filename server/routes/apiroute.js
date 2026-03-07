@@ -35,7 +35,7 @@ router.post('/queue', async (req, res) => {
         const globalCounter = await Counter.findOneAndUpdate(
             { _id: 'global_queue' },
             { $inc: { seq: 1 } },
-            { new: true, upsert: true }
+            { returnDocument: 'after', upsert: true , setDefaultsOnInsert: true }
         );
         const nextQueueNumber = globalCounter.seq;
 
@@ -43,7 +43,7 @@ router.post('/queue', async (req, res) => {
         const categoryCounter = await Counter.findOneAndUpdate(
             { _id: `category_${category}` }, // แยก ID ตามหมวด เช่น category_A
             { $inc: { seq: 1 } },
-            { new: true, upsert: true }
+            { returnDocument: 'after',upsert: true }
         );
         const nextCatSeq = categoryCounter.seq;
 

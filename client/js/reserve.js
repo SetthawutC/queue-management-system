@@ -8,7 +8,7 @@ const submitData = async () => {
         };
 
         // ส่งข้อมูลไปให้ Server 
-        const response = await axios.post("http://192.168.0.100:8000/queue", userData);
+        const response = await axios.post("http://localhost:8000/queue", userData);
 
         if (response.status === 200 || response.status === 201) {
             const result = response.data;
@@ -64,7 +64,7 @@ async function cancelMyQueue() {
     if (confirm('คุณต้องการยกเลิกคิวใช่หรือไม่?')) {
         try {
             // ** สำคัญ **: ต้องส่ง "customerstatus" ให้ตรงกับที่ Server ใช้เช็คใน renderQueueUI
-            await axios.put(`http://192.168.0.100:8000/queue/${id}`, { 
+            await axios.put(`http://localhost:8000/queue/${id}`, { 
                 customerstatus: "cancelled" 
             });
 
