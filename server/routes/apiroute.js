@@ -29,7 +29,6 @@ router.post('/queue', async (req, res) => {
         }
         const category = getCategory(customer_count);
         
-        //ดึงเลข Global Queue Number
         const globalCounter = await Counter.findOneAndUpdate(
             { _id: 'global_queue' },
             { $inc: { seq: 1 } },
@@ -37,7 +36,6 @@ router.post('/queue', async (req, res) => {
         );
         const nextQueueNumber = globalCounter.seq;
 
-        //ดึงเลขลำดับแยกตามหมวด
         const categoryCounter = await Counter.findOneAndUpdate(
             { _id: `category_${category}` }, // แยก ID ตามหมวด
             { $inc: { seq: 1 } },
@@ -45,7 +43,7 @@ router.post('/queue', async (req, res) => {
         );
         const nextCatSeq = categoryCounter.seq;
 
-        // สร้าง Label
+     
         const label = `${category}${String(nextCatSeq).padStart(2, '0')}`;
 
         const newQueue = new QueueNow({
@@ -59,7 +57,7 @@ router.post('/queue', async (req, res) => {
 
         const savedQueue = await newQueue.save();
 
-        clearQueueCache(); // ล้าง Cache เดิมของคุณ
+        clearQueueCache(); 
         res.status(201).json(savedQueue);
         
         console.log(`Success คิวใหม่: ${label} (Global: ${nextQueueNumber}) | Instance: ${process.env.NODE_APP_INSTANCE || 0}`);

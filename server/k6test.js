@@ -3,12 +3,12 @@ import http from 'k6/http';
 import { sleep } from 'k6';
 
 export let options = {
-    vus: 5, 
+    vus: 500, 
     duration: '30s' 
 };
 
 // ฟังก์ชันสำหรับสุ่มตัวเลขโทรศัพท์และข้อมูล
-function getRandomInt(min, max) {
+/*function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
@@ -37,5 +37,13 @@ export default function () {
         console.error(`❌ Request Failed! Status: ${res.status} Instance ID: ${res.json().serverID || 'unknown'}`);
     }
 
+    sleep(1); // พัก 1 วินาทีก่อนเริ่มรอบใหม่
+} */
+export default function () {
+    const url = 'http://localhost:8000/queue'; // ปรับ Path ตาม API ของคุณ
+    const res = http.get(url);
+    if (res.status !== 200) {
+        console.error(`❌ Request Failed! Status: ${res.status}`);
+    }
     sleep(1); // พัก 1 วินาทีก่อนเริ่มรอบใหม่
 }

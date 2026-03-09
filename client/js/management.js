@@ -1,10 +1,9 @@
 let queues = [];
 let currentSearchTerm = ""; // ตัวแปรเก็บคำค้นหา
 
-// --- 1. ส่วนของ SSE (แทนที่ Polling เดิม) ---
+//SSE Part
 function initManagementSSE() {
   const eventSource = new EventSource("http://localhost:8000/queue-updates");
-
   eventSource.onmessage = (event) => {
     try {
       queues = JSON.parse(event.data);
@@ -14,14 +13,13 @@ function initManagementSSE() {
       console.error("Error parsing SSE data:", err);
     }
   };
-
   eventSource.onerror = () => {
     console.error("SSE Connection failed. Reconnecting...");
-    // EventSource จะจัดการ reconnect อัตโนมัติ
+
   };
 }
 
-// --- 2. ดึงข้อมูลครั้งแรก (Initial Load) ---
+//Initial Load - get current queue data when page loads
 async function loadQueues() {
   try {
     const response = await axios.get("http://localhost:8000/queue");
@@ -32,7 +30,7 @@ async function loadQueues() {
   }
 }
 
-// --- 3. แสดงคิวในตาราง
+// Show queue list
 function displayQueues() {
   const queueList = document.getElementById("queue-list");
   const noQueueMsg = document.getElementById("no-queue-msg");
@@ -42,10 +40,9 @@ function displayQueues() {
     if (noQueueMsg) noQueueMsg.style.display = "block";
     return;
   }
-
   if (noQueueMsg) noQueueMsg.style.display = "none";
 
-  // กรองข้อมูลตามคำค้นหา (Search Filter)
+  //Search Filter + Sort by Queue Number
   const filteredQueues = queues.filter((queue) => {
     const term = currentSearchTerm.toLowerCase();
     const name = (queue.customer_name || "").toLowerCase();
@@ -53,11 +50,10 @@ function displayQueues() {
     const phone = (queue.phone || "").toString().toLowerCase();
     return name.includes(term) || label.includes(term) || phone.includes(term);
   });
-
   const sortedQueues = [...filteredQueues].sort(
     (a, b) => a.queue_number - b.queue_number,
   );
-
+  // Render Queue List
   queueList.innerHTML = sortedQueues
     .map(
       (queue) => `
@@ -96,17 +92,15 @@ function displayQueues() {
     .join("");
 }
 
-// --- 4. จัดการสถานะคิว (Complete/Call) ---
+//Queue management complete function
 async function completeQueue(id) {
   // หาคิวที่รอก่อนหน้าทั้งหมด (Global)
   const myQueue = queues.find((q) => q._id === id);
   if (!myQueue) return;
 
-  // Helper: ระบุ Catalog จากตัวอักษรแรกของ Label (เช่น A001 -> A)
   const getCatalog = (q) => (q.label ? q.label.charAt(0).toUpperCase() : "OTHER");
   const myCatalog = getCatalog(myQueue);
 
-  // Logic บังคับลำดับ: เช็คว่ามีใครมาก่อนเราแล้วยัง 'waiting' **เฉพาะใน Catalog เดียวกัน** ไหม
   const waitingsBefore = queues.filter(
     (q) =>
       q.customerstatus === "waiting" && 
@@ -117,23 +111,20 @@ async function completeQueue(id) {
   if (waitingsBefore.length > 0) {
     const firstOne = waitingsBefore[0];
     alert(
-      `กรุณาเรียกตามลำดับ! คิวที่ต้องเรียกก่อนคือ: ${firstOne.label || firstOne.queue_number}`,
+      `กรุณาเรียกตามลำดับ คิวที่ต้องเรียกก่อนคือ: ${firstOne.label || firstOne.queue_number}`,
     );
     return;
   }
 
   try {
-    // เมื่อกดเรียก ให้เปลี่ยนสถานะ (Server จะส่ง SSE ไปบอกทุกคนเอง)
     await axios.put(`http://localhost:8000/queue/${id}`, {
       customerstatus: "completed",
     });
-    // ไม่ต้องสั่ง loadQueues() ซ้ำ เพราะ SSE จะดันข้อมูลใหม่มาให้เอง
   } catch (error) {
     console.error("Update error:", error);
   }
 }
-
-// --- 5. ยกเลิกคิว ---
+// Queue Cancel Function for admin
 async function cancelQueue(id) {
   if (!confirm("ต้องการยกเลิกหรือลบคิวนี้ใช่หรือไม่?")) return;
   try {
@@ -145,17 +136,18 @@ async function cancelQueue(id) {
   }
 }
 
+// Clear All Queues Function
 async function clearQueues() {
   if (!confirm("ต้องการล้างคิวทั้งหมดใช่หรือไม่?")) return;
   try {
     await axios.delete(`http://localhost:8000/queue`);
-    loadQueues(); // โหลดข้อมูลใหม่หลังจากล้างคิว
+    loadQueues();
   } catch (error) {
     console.error("Clear queues error:", error);
   }
 }
 
-// --- Helper Functions ---
+//--Decoration functions--
 function getStatusColor(status) {
   const colors = {
     waiting: "bg-yellow-500",
@@ -174,17 +166,16 @@ function getStatusLabel(status) {
   return labels[status] || status;
 }
 
-// --- เริ่มการทำงาน ---
+// SSE Connection with Auto-Reconnect
 document.addEventListener("DOMContentLoaded", () => {
   loadQueues(); // โหลดครั้งแรก
   initManagementSSE(); // เปิดท่อรับข้อมูล Real-time
-
-  // Event Listener สำหรับช่องค้นหา
+  // Search Function with Real-time Update
   const searchInput = document.getElementById("search-input");
   if (searchInput) {
     searchInput.addEventListener("input", (e) => {
       currentSearchTerm = e.target.value.trim();
-      displayQueues(); // อัปเดตตารางทันทีที่พิมพ์
+      displayQueues();
     });
   }
 });
